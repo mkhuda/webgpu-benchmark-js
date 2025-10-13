@@ -51,15 +51,43 @@ async function runBenchmark() {
 
   // ---- Shader code ----
   const shader = /* wgsl */ `
+    struct VertexOutput {
+      @builtin(position) pos: vec4f,
+      @location(0) bary: vec3f, // untuk hitung jarak ke tepi
+    };
+
     @vertex
-    fn vs_main(@location(0) pos: vec2f) -> @builtin(position) vec4f {
-      // slight scale to fit inside viewport
-      return vec4f(pos * 0.9, 0.0, 1.0);
+    fn vs_main(@location(0) pos: vec2f) -> VertexOutput {
+      var out: VertexOutput;
+      out.pos = vec4f(pos * 0.9, 0.0, 1.0);
+
+      // hitung koordinat barycentric untuk border
+      // asumsi input vertex = (-1,-1), (1,-1), (0,1)
+      if (pos.x < 0.0 && pos.y < 0.0) {
+        out.bary = vec3f(1.0, 0.0, 0.0);
+      } else if (pos.x > 0.0 && pos.y < 0.0) {
+        out.bary = vec3f(0.0, 1.0, 0.0);
+      } else {
+        out.bary = vec3f(0.0, 0.0, 1.0);
+      }
+
+      return out;
     }
 
     @fragment
-    fn fs_main() -> @location(0) vec4f {
-      return vec4f(0.3, 0.7, 1.0, 1.0); // light blue
+    fn fs_main(@location(0) bary: vec3f) -> @location(0) vec4f {
+      // hitung jarak ke tepi
+      let edgeDist = min(min(bary.x, bary.y), bary.z);
+
+      // threshold border
+      let borderThickness = 0.05;
+      let borderColor = vec3f(0.6, 0.6, 0.6);  // abu-abu
+      let fillColor = vec3f(0.3, 0.7, 1.0);    // biru muda
+
+      let t = smoothstep(0.0, borderThickness, edgeDist);
+      let color = mix(borderColor, fillColor, t);
+
+      return vec4f(color, 1.0);
     }
   `;
 
