@@ -1,6 +1,6 @@
 # ⚡ WebGPU Benchmarks — mkhuda.com
 
-A collection of lightweight **WebGPU / WebGL benchmark experiments** that run entirely in the browser.  
+A collection of lightweight **WebGPU benchmark experiments** that run entirely in the browser.
 Built for the [mkhuda.com](https://mkhuda.com) article series exploring the future of WebGPU in modern web development.
 
 ![Preview](https://cdn.mkhuda.com/wp-content/uploads/2025/10/Screenshot-2025-10-13-072354.png)
@@ -16,13 +16,9 @@ Built for the [mkhuda.com](https://mkhuda.com) article series exploring the futu
 | `/public/index.html` | Landing page linking to all available benchmarks. |
 
 👉 **Read the full Indonesian articles here:**
-- [Part 1 — Benchmark GPU Langsung di Browser (WebGPU)](https://mkhuda.com/benchmark-gpu-browser-webgpu)
-- [Part 2 — Membedah Basemark WebGL Architecture](https://mkhuda.com/bedah-basemark-webgl-architecture)
-- [Part 3 — Geometry Stress Test WebGPU](https://mkhuda.com/geometry-stress-test-webgpu)
-
----
-
-## 📁 Folder Structure
+- [Part 1 — Benchmark GPU Langsung di Browser (WebGPU)](https://mkhuda.com/web/eksperimen-webgpu-cara-tes-performa-gpu-langsung-dari-browser/)
+- [Part 2 — Membedah Basemark WebGL Architecture](https://mkhuda.com/web/membedah-basemark-web-arsitektur-benchmark-gpu-di-browser-era-webgl/)
+- [Part 3 — Geometry Stress Test WebGPU](https://mkhuda.com/web/geometry-stress-test-webgpu-benchmark-gpu-langsung-di-browser/)
 
 
 
