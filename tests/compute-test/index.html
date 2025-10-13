@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simple GPU Benchmark (WebGPU/WebGL)</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 780px;
+        margin: 32px auto;
+        padding: 0 16px;
+      }
+      h1 {
+        margin-bottom: 8px;
+      }
+      .row {
+        margin: 12px 0;
+      }
+      button {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        cursor: pointer;
+      }
+      code,
+      pre {
+        background: #111;
+        color: #eee;
+        padding: 12px;
+        border-radius: 8px;
+        overflow: auto;
+      }
+      .muted {
+        color: #666;
+        font-size: 0.95em;
+      }
+      .ok {
+        color: #0a7;
+      }
+      .warn {
+        color: #c80;
+      }
+      .err {
+        color: #d33;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+          'Liberation Mono', monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Simple GPU Benchmark</h1>
+    <p class="muted">
+      Tests GPU execution time for simple computational loads. WebGPU priority,
+      fallback to WebGL if necessary.
+    </p>
+
+    <div class="row">
+      <label for="size">Vector size (elemen): </label>
+      <input id="size" type="number" value="1048576" step="65536" min="65536" />
+    </div>
+    <div class="row">
+      <label for="iters">Iterations (loop kerja): </label>
+      <input id="iters" type="number" value="50" min="1" />
+    </div>
+
+    <div class="row">
+      <button id="run">Run Benchmark</button>
+      <span id="env" class="muted"></span>
+    </div>
+
+    <pre id="out" class="mono">Ready.</pre>
+
+    <canvas id="glcanvas" width="2" height="2" style="display: none"></canvas>
+
+    <script type="module" src="./compute-test.js"></script>
+  </body>
+</html>

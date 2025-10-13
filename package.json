@@ -1,18 +1,19 @@
 {
-  "name": "html-css",
-  "version": "1.0.0",
-  "description": "A template for HTML and CSS",
-  "main": "index.html",
-  "scripts": {
-    "start": "serve"
-  },
-  "keywords": [
-    "html",
-    "css"
-  ],
-  "author": "Ives van Hoorne",
-  "license": "MIT",
-  "devDependencies": {
-    "serve": "11.2.0"
-  }
+   "name": "webgpu-benchmarks",
+   "version": "1.0.0",
+   "type": "module",
+   "description": "Kumpulan benchmark WebGPU / WebGL by mkhuda.com",
+   "scripts": {
+      "start": "node server.js"
+   },
+   "keywords": [
+      "webgpu",
+      "gpu-benchmark"
+   ],
+   "author": "M Khoirul Huda",
+   "license": "MIT",
+   "dependencies": {
+      "express": "^5.1.0",
+      "serve": "^14.2.5"
+   }
 }

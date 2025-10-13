@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geometry Stress Test WebGPU</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f8fafc;
+      color: #111827;
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+    canvas {
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #0f172a;
+      display: block;
+    }
+    pre {
+      background: #1e293b;
+      color: #f1f5f9;
+      padding: 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      width: 640px;
+      overflow-x: auto;
+    }
+    button {
+      margin-top: 1rem;
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.6rem 1.2rem;
+      cursor: pointer;
+    }
+    button:hover { background: #0284c7; }
+  </style>
+</head>
+<body>
+  <h1>Geometry Stress Test WebGPU</h1>
+  <canvas id="gpu-canvas" width="640" height="480"></canvas>
+  <pre id="output">Menunggu inisialisasi...</pre>
+  <button id="run">Jalankan Benchmark</button>
+
+  <script type="module" src="./geometry-test.js"></script>
+</body>
+</html>

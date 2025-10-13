@@ -1,0 +1,39 @@
+body {
+  font-family: system-ui, sans-serif;
+  background: #f8fafc;
+  color: #111827;
+  margin: 0;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+main {
+  max-width: 600px;
+  text-align: center;
+}
+ul {
+  list-style: none;
+  padding: 0;
+}
+li {
+  margin: 0.8rem 0;
+}
+a {
+  background: #0ea5e9;
+  color: #fff;
+  text-decoration: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  display: inline-block;
+  transition: background 0.2s;
+}
+a:hover {
+  background: #0284c7;
+}
+footer {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  color: #475569;
+}
