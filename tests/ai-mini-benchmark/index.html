@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebGPU AI Mini Benchmark</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #0d1117;
+        color: #e6edf3;
+        margin: 0;
+        padding: 2rem;
+        line-height: 1.6;
+      }
+      h1 {
+        color: #58a6ff;
+        font-weight: 600;
+      }
+      input,
+      button {
+        padding: 0.4rem 0.6rem;
+        margin: 0.2rem;
+        border: none;
+        border-radius: 6px;
+        background: #161b22;
+        color: #e6edf3;
+      }
+      button {
+        cursor: pointer;
+        background: #238636;
+        transition: background 0.2s;
+      }
+      button:hover {
+        background: #2ea043;
+      }
+      pre {
+        background: #161b22;
+        border-radius: 6px;
+        padding: 1rem;
+        overflow-x: auto;
+        margin-top: 1rem;
+      }
+      footer {
+        margin-top: 2rem;
+        opacity: 0.8;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧠 WebGPU AI Mini Benchmark</h1>
+    <p>
+      Tes kecil untuk mengukur kemampuan GPU dalam melakukan
+      <strong>matrix multiply</strong> seperti di model AI (MLP, transformer,
+      dll). <br />Pastikan browser kamu mendukung <code>WebGPU</code> (Chrome
+      113+, Edge 113+).
+    </p>
+
+    <div>
+      Matrix Size:
+      <input id="size" type="number" value="64" min="8" max="256" step="8" />
+      Iterations:
+      <input id="iters" type="number" value="10" min="1" max="100" />
+      <button id="run">▶ Jalankan Benchmark</button>
+    </div>
+
+    <pre id="out">Siap jalankan test...</pre>
+
+    <footer>
+      © 2025
+      <a href="https://mkhuda.com" style="color: #58a6ff">mkhuda.com</a> — Part
+      4: WebGPU AI Mini Benchmark
+    </footer>
+
+    <script type="module" src="./ai-mini-benchmark.js"></script>
+  </body>
+</html>
