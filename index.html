@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simple GPU Benchmark (WebGPU/WebGL)</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 780px;
+        margin: 32px auto;
+        padding: 0 16px;
+      }
+      h1 {
+        margin-bottom: 8px;
+      }
+      .row {
+        margin: 12px 0;
+      }
+      button {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        cursor: pointer;
+      }
+      code,
+      pre {
+        background: #111;
+        color: #eee;
+        padding: 12px;
+        border-radius: 8px;
+        overflow: auto;
+      }
+      .muted {
+        color: #666;
+        font-size: 0.95em;
+      }
+      .ok {
+        color: #0a7;
+      }
+      .warn {
+        color: #c80;
+      }
+      .err {
+        color: #d33;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+          "Liberation Mono", monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Simple GPU Benchmark</h1>
+    <p class="muted">
+      Menguji waktu eksekusi GPU untuk beban komputasi sederhana. Prioritas
+      <strong>WebGPU</strong>, fallback ke <strong>WebGL</strong> jika perlu.
+    </p>
+
+    <div class="row">
+      <label for="size">Vector size (elemen): </label>
+      <input id="size" type="number" value="1048576" step="65536" min="65536" />
+    </div>
+    <div class="row">
+      <label for="iters">Iterations (loop kerja): </label>
+      <input id="iters" type="number" value="50" min="1" />
+    </div>
+
+    <div class="row">
+      <button id="run">Run Benchmark</button>
+      <span id="env" class="muted"></span>
+    </div>
+
+    <pre id="out" class="mono">Ready.</pre>
+
+    <canvas id="glcanvas" width="2" height="2" style="display: none"></canvas>
+
+    <script>
+      const out = document.getElementById("out");
+      const env = document.getElementById("env");
+      const sizeEl = document.getElementById("size");
+      const itersEl = document.getElementById("iters");
+      const runBtn = document.getElementById("run");
+
+      function log(msg) {
+        out.textContent += "\n" + msg;
+      }
+      function reset(msg = "") {
+        out.textContent = msg || "";
+      }
+
+      function getGPUInfo() {
+        const canvas = document.createElement("canvas");
+        const gl =
+          canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        if (!gl) return { vendor: "Unknown", renderer: "Unknown" };
+
+        const ext = gl.getExtension("WEBGL_debug_renderer_info");
+        if (ext) {
+          const vendor = gl.getParameter(ext.UNMASKED_VENDOR_WEBGL);
+          const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+          return { vendor, renderer };
+        } else {
+          return {
+            vendor: gl.getParameter(gl.VENDOR),
+            renderer: gl.getParameter(gl.RENDERER),
+          };
+        }
+      }
+
+      // -----------------------------
+      // WEBGPU PATH
+      // -----------------------------
+      async function benchWebGPU(N, iters) {
+        if (!("gpu" in navigator)) throw new Error("WebGPU not supported");
+
+        const adapter = await navigator.gpu.requestAdapter();
+        if (!adapter) throw new Error("No WebGPU adapter");
+        const device = await adapter.requestDevice();
+        const queue = device.queue;
+
+        // WGSL compute shader: C[i] = A[i] + B[i]
+        const shaderCode = /* wgsl */ `
+        @group(0) @binding(0) var<storage, read>  A: array<f32>;
+        @group(0) @binding(1) var<storage, read>  B: array<f32>;
+        @group(0) @binding(2) var<storage, read_write>  C: array<f32>;
+
+        @compute @workgroup_size(256)
+        fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+          let i = gid.x;
+          if (i < arrayLength(&C)) {
+            // variasi perhitungan kecil supaya sedikit lebih berat
+            var acc = A[i] + B[i];
+            // putar2 sedikit
+            acc = acc * 1.000001 + 0.000001 * acc;
+            C[i] = acc;
+          }
+        }`;
+
+        // Buffers
+        const bufSize = N * 4; // f32
+        const A = device.createBuffer({
+          size: bufSize,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        const B = device.createBuffer({
+          size: bufSize,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        const C = device.createBuffer({
+          size: bufSize,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        });
+
+        // Upload initial data
+        const aData = new Float32Array(N);
+        const bData = new Float32Array(N);
+        for (let i = 0; i < N; i++) {
+          aData[i] = i % 97;
+          bData[i] = (i % 67) * 0.5;
+        }
+        queue.writeBuffer(A, 0, aData);
+        queue.writeBuffer(B, 0, bData);
+
+        const module = device.createShaderModule({ code: shaderCode });
+        const pipeline = device.createComputePipeline({
+          layout: "auto",
+          compute: { module, entryPoint: "main" },
+        });
+
+        const bindGroup = device.createBindGroup({
+          layout: pipeline.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: { buffer: A } },
+            { binding: 1, resource: { buffer: B } },
+            { binding: 2, resource: { buffer: C } },
+          ],
+        });
+
+        const workgroupSize = 256;
+        const workgroups = Math.ceil(N / workgroupSize);
+
+        // Jalankan beberapa iterasi agar “berasa”
+        const t0 = performance.now();
+        for (let k = 0; k < iters; k++) {
+          const encoder = device.createCommandEncoder();
+          const pass = encoder.beginComputePass();
+          pass.setPipeline(pipeline);
+          pass.setBindGroup(0, bindGroup);
+          pass.dispatchWorkgroups(workgroups);
+          pass.end();
+          const cmd = encoder.finish();
+          queue.submit([cmd]);
+        }
+        // Tunggu semua submit selesai (sinkronisasi)
+        await queue.onSubmittedWorkDone();
+        const t1 = performance.now();
+
+        // Estimasi waktu GPU ~ waktu submit+selesai (cukup untuk demo)
+        const ms = t1 - t0;
+        const ops = BigInt(N) * BigInt(iters); // 1 operasi per elemen (kurang-lebih)
+        const opsPerSec = Number(ops) / (ms / 1000);
+        return { backend: "WebGPU", ms, opsPerSec };
+      }
+
+      // -----------------------------
+      // WEBGL PATH (disjoint timer query)
+      // -----------------------------
+      function createGLTimerExt(gl) {
+        return (
+          gl.getExtension("EXT_disjoint_timer_query_webgl2") ||
+          gl.getExtension("EXT_disjoint_timer_query")
+        );
+      }
+
+      async function benchWebGL(N, iters) {
+        const canvas = document.getElementById("glcanvas");
+        // Prefer WebGL2
+        let gl = canvas.getContext("webgl2", {
+          antialias: false,
+          preserveDrawingBuffer: false,
+        });
+        let isWebGL2 = true;
+        if (!gl) {
+          gl = canvas.getContext("webgl", { antialias: false });
+          isWebGL2 = false;
+        }
+        if (!gl) throw new Error("WebGL not supported");
+
+        const ext = createGLTimerExt(gl);
+        if (!ext) throw new Error("EXT_disjoint_timer_query not supported");
+
+        // Buat program sederhana yang melakukan kerja di fragment shader
+        const vs = `
+        attribute vec2 a_pos;
+        void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+      `;
+        const fs = isWebGL2
+          ? `#version 300 es
+        precision highp float;
+        out vec4 outColor;
+        void main() {
+          // kerja kecil per fragment
+          float x = gl_FragCoord.x * 0.00001;
+          for (int i=0;i<40;i++){ x = sqrt(x*x + 0.000001); }
+          outColor = vec4(x, 0.0, 0.0, 1.0);
+        }
+      `
+          : `
+        precision highp float;
+        void main() {
+          float x = gl_FragCoord.x * 0.00001;
+          for (int i=0;i<40;i++){ x = sqrt(x*x + 0.000001); }
+          gl_FragColor = vec4(x, 0.0, 0.0, 1.0);
+        }
+      `;
+
+        function compile(type, src) {
+          const s = gl.createShader(type);
+          gl.shaderSource(s, src);
+          gl.compileShader(s);
+          if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(s) || "shader compile error");
+          }
+          return s;
+        }
+        const vsObj = compile(gl.VERTEX_SHADER, vs);
+        const fsObj = compile(gl.FRAGMENT_SHADER, fs);
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vsObj);
+        gl.attachShader(prog, fsObj);
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+          throw new Error(gl.getProgramInfoLog(prog) || "program link error");
+        }
+        gl.useProgram(prog);
+
+        // Quad layar penuh
+        const posLoc = gl.getAttribLocation(prog, "a_pos");
+        const vao = isWebGL2 ? gl.createVertexArray() : null;
+        if (vao) gl.bindVertexArray(vao);
+        const vbo = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+        const verts = new Float32Array([
+          -1, -1, 1, -1, -1, 1, 1, -1, 1, 1, -1, 1,
+        ]);
+        gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(posLoc);
+        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+        // Skala workload dengan N & iters lewat viewport & draw calls
+        // Kita gunakan viewport besar secukupnya (N ~ jumlah frag kasar)
+        const side = Math.max(2, Math.floor(Math.sqrt(N)));
+        canvas.width = side;
+        canvas.height = side;
+        gl.viewport(0, 0, side, side);
+
+        // Timer query
+        const createQuery = () =>
+          isWebGL2 ? gl.createQuery() : ext.createQueryEXT();
+        const beginQuery = (q) => {
+          if (isWebGL2) gl.beginQuery(ext.TIME_ELAPSED_EXT, q);
+          else ext.beginQueryEXT(ext.TIME_ELAPSED_EXT, q);
+        };
+        const endQuery = () => {
+          if (isWebGL2) gl.endQuery(ext.TIME_ELAPSED_EXT);
+          else ext.endQueryEXT(ext.TIME_ELAPSED_EXT);
+        };
+        const getQueryAvailable = (q) => {
+          return isWebGL2
+            ? gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)
+            : ext.getQueryObjectEXT(q, ext.QUERY_RESULT_AVAILABLE_EXT);
+        };
+        const getQueryResult = (q) => {
+          return isWebGL2
+            ? gl.getQueryParameter(q, gl.QUERY_RESULT)
+            : ext.getQueryObjectEXT(q, ext.QUERY_RESULT_EXT);
+        };
+
+        // Jalankan beberapa iterasi dalam satu query besar agar presisi
+        const q = createQuery();
+        beginQuery(q);
+        for (let k = 0; k < iters; k++) {
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+        endQuery();
+
+        // Polling sampai hasil siap
+        await new Promise((resolve, reject) => {
+          function check() {
+            const disjoint = gl.getParameter(ext.GPU_DISJOINT_EXT);
+            if (disjoint) {
+              reject(new Error("GPU disjoint (timer invalid)"));
+              return;
+            }
+            if (getQueryAvailable(q)) resolve();
+            else requestAnimationFrame(check);
+          }
+          check();
+        });
+
+        const elapsedNs = getQueryResult(q); // nanoseconds
+        const ms = elapsedNs / 1e6;
+
+        // “Ops” kira-kira = jumlah fragment * loop kecil * iters
+        const frags = (side * side * 6) / 2; // 2 tri => 1 quad => kira2 2 tri = 6 vert; per-frag dihitung implicit
+        const workPerFrag = 40; // sesuai loop di shader
+        const approxOps =
+          BigInt(Math.max(1, Math.floor(frags * workPerFrag))) * BigInt(iters);
+        const opsPerSec = Number(approxOps) / (ms / 1000);
+
+        return {
+          backend: isWebGL2
+            ? "WebGL2 (EXT_timer_query)"
+            : "WebGL1 (EXT_timer_query)",
+          ms,
+          opsPerSec,
+        };
+      }
+
+      async function run() {
+        reset("Running...");
+        const N = Math.max(65536, Number(sizeEl.value) | 0);
+        const iters = Math.max(1, Number(itersEl.value) | 0);
+
+        // Info environment
+        let info = "";
+        if ("gpu" in navigator) info += "WebGPU available. ";
+        const gl =
+          document.getElementById("glcanvas").getContext("webgl2") ||
+          document.getElementById("glcanvas").getContext("webgl");
+        if (gl) info += "WebGL available.";
+        env.textContent = info;
+
+        try {
+          let result;
+          if ("gpu" in navigator) {
+            result = await benchWebGPU(N, iters);
+          } else {
+            result = await benchWebGL(N, iters);
+          }
+          reset();
+          const infoGPU = getGPUInfo();
+          log(`GPU: ${infoGPU.renderer} - (${infoGPU.vendor})`);
+          log(`Backend     : ${result.backend}`);
+          log(`Vector size : ${N.toLocaleString("en-US")} (approx workload)`);
+          log(`Iterations  : ${iters}`);
+          log(`GPU time    : ${result.ms.toFixed(3)} ms`);
+          log(
+            `~Ops/Second : ${Math.round(result.opsPerSec).toLocaleString(
+              "en-US"
+            )}`
+          );
+          log("");
+          log(
+            "Catatan: angka ini untuk perbandingan relatif antar mesin/tab/browser."
+          );
+        } catch (e) {
+          reset();
+          log("Gagal jalankan benchmark.");
+          log(e && e.message ? e.message : String(e));
+          log("");
+          log(
+            "Coba: pakai Chrome/Edge terbaru (WebGPU) atau pastikan EXT_disjoint_timer_query aktif (WebGL)."
+          );
+        }
+      }
+
+      runBtn.addEventListener("click", run);
+    </script>
+  </body>
+</html>
