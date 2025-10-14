@@ -1,6 +1,5 @@
 // ai-mini-benchmark.js
-import { getGPUInfo } from '/utils/gpu-info.js'; // optional jika kamu punya util itu
-
+import { getGPUInfo } from '/utils/gpu-info.js';
 const out = document.getElementById('out');
 const runBtn = document.getElementById('run');
 const sizeEl = document.getElementById('size');

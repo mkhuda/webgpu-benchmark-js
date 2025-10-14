@@ -39,9 +39,11 @@ app.use(
     index: 'index.html',
   })
 );
+
+// CPU / GPU Benchmark with Mandelbrot computation
 app.use(
-  '/geometry-test',
-  express.static(path.join(__dirname, 'tests/geometry-test'), {
+  '/mandelbrot-benchmark',
+  express.static(path.join(__dirname, 'tests/cpu-gpu-compute-benchmark/dist'), {
     index: 'index.html',
   })
 );

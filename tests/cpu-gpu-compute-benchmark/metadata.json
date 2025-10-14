@@ -1,0 +1,5 @@
+{
+  "name": "cpu-gpu-compute-benchmark",
+  "description": "A web app that benchmarks complex computations on the CPU vs the GPU using WebGPU.",
+  "requestFramePermissions": []
+}

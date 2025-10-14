@@ -21,6 +21,16 @@ li {
   margin: 0.8rem 0;
 }
 a {
+  font-weight: bold;
+  color: #0ea5e9;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+a:hover {
+  color: #0284c7;
+  text-decoration: none;
+}
+a.link-button {
   background: #0ea5e9;
   color: #fff;
   text-decoration: none;
@@ -29,7 +39,7 @@ a {
   display: inline-block;
   transition: background 0.2s;
 }
-a:hover {
+a.link-button:hover {
   background: #0284c7;
 }
 footer {

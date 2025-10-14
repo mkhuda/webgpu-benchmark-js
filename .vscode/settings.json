@@ -4,9 +4,6 @@
   "editor.insertSpaces": true,
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": true
-  },
   "javascript.validate.enable": true,
   "eslint.enable": true,
   "[javascript]": {
